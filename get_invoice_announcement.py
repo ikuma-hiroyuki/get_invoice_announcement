@@ -21,7 +21,6 @@ def get_invoice_announcement() -> list[dict]:
     """
 
     register_numbers = RegistrationNumbsers()
-    register_numbers.get_number_list()
 
     load_dotenv()
     parameters = {
@@ -49,14 +48,11 @@ def write_invoice_announcement(corporates: list[dict]):
     :return:
     """
 
-    invoice_rows = [
-        [
-            corporate["registratedNumber"],
-            corporate["name"],
-            corporate["address"]
-        ]
-        for corporate in corporates
-    ]
+    invoice_rows = [[
+        corporate["registratedNumber"],
+        corporate["name"],
+        corporate["address"]
+    ] for corporate in corporates]
     invoice_rows.insert(0, ["登録番号", "名前", "住所"])
 
     with open("invoice.csv", "w", encoding="utf-8", newline="") as file:
@@ -64,5 +60,5 @@ def write_invoice_announcement(corporates: list[dict]):
 
 
 if __name__ == "__main__":
-    invoice_list = get_invoice_announcement()
+    invoice_list: list[dict] = get_invoice_announcement()
     write_invoice_announcement(invoice_list)
