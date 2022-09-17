@@ -1,45 +1,51 @@
+import csv
 import os
 
 import requests
 from dotenv import load_dotenv
 
+from get_registration_numbers import RegistrationNumbsers
 
-class RegistrationNumbsers:
-    def __init__(self):
-        self.number_list = []
-
-    def get_number(self):
-        with open("registration_numbers.csv", "r") as file:
-            self.number_list = [_.replace("\n", "") for _ in file.readlines()]
+BASE_URL = 'https://web-api.invoice-kohyo.nta.go.jp/1/num'
 
 
-register_number = RegistrationNumbsers()
-register_number.get_number()
+def get_invoice_announcement() -> list[dict]:
+    register_numbers = RegistrationNumbsers()
+    register_numbers.get_number_list()
 
-
-def get_invoice():
     load_dotenv()
-    base_url = 'https://web-api.invoice-kohyo.nta.go.jp/1/num'
-    register_number_list = register_number.number_list
     parameters = {
         "id": os.getenv("API_ID"),
-        "number": register_number_list,
+        "number": register_numbers.number_list,
         "type": "21",
         "history": "0"
     }
 
     try:
-        response = requests.get(base_url, params=parameters)
+        response: requests.Response = requests.get(BASE_URL, params=parameters)
         response.raise_for_status()
-        corporates = response.json()["announcement"]
+        corporates: list[dict] = response.json()["announcement"]
     except requests.exceptions.RequestException as err:
         print("エラー: ", err)
     else:
-        for corporate in corporates:
-            print(f"[登録番号] {corporate['registratedNumber']}\n"
-                  f"[名前] {corporate['name']}\n"
-                  f"[住所] {corporate['address']}", end="\n\n")
+        return corporates
+
+
+def write_invoice_announcement(corporates: list[dict]):
+    invoice_rows = [
+        [
+            corporate["registratedNumber"],
+            corporate["name"],
+            corporate["address"]
+        ]
+        for corporate in corporates
+    ]
+    invoice_rows.insert(0, ["登録番号", "名前", "住所"])
+
+    with open("invoice.csv", "w", encoding="utf-8", newline="") as file:
+        csv.writer(file).writerows(invoice_rows)
 
 
 if __name__ == "__main__":
-    get_invoice()
+    invoice_list = get_invoice_announcement()
+    write_invoice_announcement(invoice_list)
