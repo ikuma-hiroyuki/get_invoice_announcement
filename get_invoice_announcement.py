@@ -4,7 +4,7 @@ import os
 import requests
 from dotenv import load_dotenv
 
-from get_registration_numbers import RegistrationNumbsers
+from get_registration_numbers import get_number_list
 
 
 def get_invoice_announcement() -> list[dict]:
@@ -20,12 +20,10 @@ def get_invoice_announcement() -> list[dict]:
     :raise: err: apiリクエスト失敗
     """
 
-    register_numbers = RegistrationNumbsers()
-
     load_dotenv()
     parameters = {
         "id": os.getenv("API_ID"),
-        "number": register_numbers.number_list,
+        "number": get_number_list(),
         "type": "21",
         "history": "0"
     }
