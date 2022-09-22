@@ -28,15 +28,11 @@ def get_invoice_announcement() -> list[dict]:
         "history": "0"
     }
 
-    try:
-        base_url = 'https://web-api.invoice-kohyo.nta.go.jp/1/num'
-        response: requests.Response = requests.get(base_url, params=parameters)
-        response.raise_for_status()
-        corporates: list[dict] = response.json()["announcement"]
-    except requests.exceptions.RequestException as err:
-        print("エラー: ", err)
-    else:
-        return corporates
+    base_url = 'https://web-api.invoice-kohyo.nta.go.jp/1/num'
+    response: requests.Response = requests.get(base_url, params=parameters)
+    response.raise_for_status()
+    corporates: list[dict] = response.json()["announcement"]
+    return corporates
 
 
 def write_invoice_announcement(corporates: list[dict]):
@@ -58,5 +54,10 @@ def write_invoice_announcement(corporates: list[dict]):
 
 
 if __name__ == "__main__":
-    invoice_list: list[dict] = get_invoice_announcement()
-    write_invoice_announcement(invoice_list)
+    try:
+        invoice_list: list[dict] = get_invoice_announcement()
+        write_invoice_announcement(invoice_list)
+    except requests.exceptions.RequestException as err:
+        print("エラー: ", err)
+    else:
+        print("完了")
