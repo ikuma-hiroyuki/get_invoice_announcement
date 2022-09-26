@@ -4,8 +4,6 @@ import os
 import requests
 from dotenv import load_dotenv
 
-# 'と"で使い分けがあるのか？
-
 BASE_FILE_PATH = "registration_numbers.csv"
 RESULT_FILE_PATH = "invoice.csv"
 FIELD_DICT = {'registratedNumber': '登録番号', 'name': '名前', 'address': '住所', }
