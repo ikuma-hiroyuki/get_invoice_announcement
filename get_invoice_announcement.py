@@ -4,60 +4,62 @@ import os
 import requests
 from dotenv import load_dotenv
 
-from get_registration_numbers import get_number_list
+BASE_FILE_PATH = "registration_numbers.csv"
+RESULT_FILE_PATH = "invoice.csv"
+FIELDS = ['registratedNumber', 'name', 'address']
 
 
-def get_invoice_announcement() -> list[dict]:
-    """
-    インボイス公表システムWeb-APIから公表情報をjson形式で返却。\n
+class APIRequest:
+    def __init__(self, path):
+        """
+        CSVファイルのパスを受け取り、CSVファイルから登録番号のリストを読み込む
+        ファイルが存在しない場合は FileNotFoundError がraise されて終了
+        """
+        with open(path) as file:
+            self.number_list = [_.replace("\n", "") for _ in file.readlines()]
 
-    インボイス公表システム(https://www.invoice-kohyo.nta.go.jp/)
-    に登録番号を投げ公開情報を取得、json形式で返却。\n
-    同階層の registration_numbers.csv に記載された番号を基に取得する。
+    def _get_request_params(self) -> dict:
+        """
+        発行するリクエストのパラメータを返す
+        """
+        return {
+            "id": os.getenv("API_ID"),
+            "number": self.number_list,
+            "type": "21",
+            "history": "0"
+        }
 
-    :rtype: list[dict]
-    :return: インボイス公開情報をjsonで返す
-    :raise: err: apiリクエスト失敗
-    """
+    def get_response_json(self) -> int:
+        """
+        APIからのレスポンスを辞書のリストとしてインスタンス変数に格納する
 
-    load_dotenv()
-    parameters = {
-        "id": os.getenv("API_ID"),
-        "number": get_number_list(),
-        "type": "21",
-        "history": "0"
-    }
+        :return: レスポンスのステータスコード
+        """
+        base_url = "https://web-api.invoice-kohyo.nta.go.jp/1/num"
+        response: requests.Response = requests.get(base_url, params=self._get_request_params())
+        if response.status_code == 200:
+            self.response_list = response.json()["announcement"]
 
-    base_url = 'https://web-api.invoice-kohyo.nta.go.jp/1/num'
-    response: requests.Response = requests.get(base_url, params=parameters)
-    response.raise_for_status()
-    corporates: list[dict] = response.json()["announcement"]
-    return corporates
+        return response.status_code
 
-
-def write_invoice_announcement(corporates: list[dict]):
-    """
-    json形式で渡された情報をもとに同階層に invoice.csv を作成する。\n
-    :param list[dict] corporates:
-    :return:
-    """
-
-    invoice_rows = [[
-        corporate["registratedNumber"],
-        corporate["name"],
-        corporate["address"]
-    ] for corporate in corporates]
-    invoice_rows.insert(0, ["登録番号", "名前", "住所"])
-
-    with open("invoice.csv", "w", encoding="utf-8", newline="") as file:
-        csv.writer(file).writerows(invoice_rows)
+    def wrete_csv(self, path, fields):
+        """
+        APIリクエストを発行し、結果をCSVファイルに書き込む
+        :param path: 書き込むCSVファイルのパス
+        :param fields: CSVファイルのフィールド名
+        """
+        with open(path, "w", encoding="utf-8", newline="") as file:
+            write = csv.DictWriter(file, fieldnames=fields, extrasaction="ignore")
+            write.writeheader()
+            write.writerows(self.response_list)
 
 
 if __name__ == "__main__":
-    try:
-        invoice_list: list[dict] = get_invoice_announcement()
-        write_invoice_announcement(invoice_list)
-    except requests.exceptions.RequestException as err:
-        print("エラー: ", err)
+    load_dotenv()
+
+    api_request = APIRequest(BASE_FILE_PATH)
+    result = api_request.get_response_json()
+    if result == 200:
+        api_request.wrete_csv(RESULT_FILE_PATH, fields=FIELDS)
     else:
-        print("完了")
+        print(f"APIリクエストに失敗しました status_code: {result}")
